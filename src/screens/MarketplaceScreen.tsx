@@ -176,8 +176,7 @@ const ProductCard: FC<ProductCardProps> = ({ product, compact }) => {
 
           {/* Price */}
           <View style={styles.priceContainer}>
-            <Text style={styles.originalPrice}>{product.originalPrice}</Text>
-            <Text style={styles.currentPrice}>{product.price}</Text>
+            <Text style={styles.productPrice}>{product.originalPrice}</Text>
           </View>
         </View>
       </Animated.View>
@@ -623,16 +622,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   } as ViewStyle,
 
-  originalPrice: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    textDecorationLine: "line-through",
-    marginRight: 8,
-  } as TextStyle,
-
-  currentPrice: {
+  productPrice: {
     fontSize: 16,
     fontWeight: "800",
-    color: COLORS.danger,
+    color: COLORS.accent,
   } as TextStyle,
 })
