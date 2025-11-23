@@ -37,40 +37,24 @@ const REELS_DATA = [
     video: require("../../assets/videos/DJwd0gEh5mS.mp4"),
     username: "@zst_official",
     caption: "New collection dropping soon. Stay tuned for the reveal.",
-    likes: "24.5K",
-    comments: "1,842",
-    shares: "892",
-    music: "Original Sound - ZST",
   },
   {
     id: "2",
     video: require("../../assets/videos/DFwAwjbRNR9.mp4"),
     username: "@fashion_forward",
     caption: "Street style meets haute couture. This is the future.",
-    likes: "18.2K",
-    comments: "956",
-    shares: "423",
-    music: "Trending Beat - Viral",
   },
   {
     id: "3",
     video: require("../../assets/videos/DCXARZ4SQKs.mp4"),
     username: "@style_maven",
     caption: "Behind the scenes of our latest photoshoot. Pure magic.",
-    likes: "31.7K",
-    comments: "2,103",
-    shares: "1,247",
-    music: "Aesthetic Vibes - Studio",
   },
   {
     id: "4",
     video: require("../../assets/videos/DDsWliiOVxD.mp4"),
     username: "@urban_threads",
     caption: "Craftsmanship meets creativity. Every stitch tells a story.",
-    likes: "12.9K",
-    comments: "734",
-    shares: "312",
-    music: "Lo-Fi Dreams - Chill",
   },
 ]
 
@@ -233,15 +217,6 @@ const ReelItem: FC<ReelItemProps> = ({ reel, isActive, index }) => {
           {reel.caption}
         </Text>
 
-        {/* Music ticker */}
-        <View style={styles.musicRow}>
-          <View style={styles.musicNote}>
-            <Text style={styles.musicNoteText}>&#9835;</Text>
-          </View>
-          <Text style={styles.musicText} numberOfLines={1}>
-            {reel.music}
-          </Text>
-        </View>
       </Animated.View>
 
       {/* Progress bar */}
@@ -514,33 +489,6 @@ const styles = StyleSheet.create({
     textShadowColor: COLORS.overlayDark,
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
-  } as TextStyle,
-
-  musicRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  } as ViewStyle,
-
-  musicNote: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: COLORS.whiteGhost,
-    justifyContent: "center",
-    alignItems: "center",
-  } as ViewStyle,
-
-  musicNoteText: {
-    fontSize: 14,
-    color: COLORS.white,
-  } as TextStyle,
-
-  musicText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: COLORS.whiteMuted,
-    flex: 1,
   } as TextStyle,
 
   // Progress bar
