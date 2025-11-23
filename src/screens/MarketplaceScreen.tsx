@@ -21,61 +21,72 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window")
 const NEW_PRODUCTS = [
   {
     id: "1",
-    name: "VR Pro Headset",
-    brand: "ZST Tech",
+    name: "Black North Face",
+    brand: "North Face",
     price: "8000DA",
     originalPrice: "10000DA",
     discount: 20,
     rating: 4.8,
     reviews: 128,
-    image: "https://images.unsplash.com/photo-1622979135225-d2ba269cf1ac?w=400",
+    image: require("../../assets/images/black north face.png"),
   },
   {
     id: "2",
-    name: "Wireless Elite",
-    brand: "ZST Audio",
+    name: "Blue North Face",
+    brand: "North Face",
     price: "8000DA",
     originalPrice: "10000DA",
     discount: 20,
     rating: 4.6,
     reviews: 84,
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400",
+    image: require("../../assets/images/bluie northface.png"),
   },
   {
     id: "3",
-    name: "Smart Watch X",
+    name: "Brown Vest",
     brand: "ZST Wear",
-    price: "8000DA",
-    originalPrice: "10000DA",
-    discount: 10,
+    price: "7500DA",
+    originalPrice: "9500DA",
+    discount: 21,
     rating: 4.9,
     reviews: 256,
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400",
+    image: require("../../assets/images/brown.png"),
+  },
+  {
+    id: "4",
+    name: "Grey Vest",
+    brand: "ZST Wear",
+    price: "7000DA",
+    originalPrice: "9000DA",
+    discount: 22,
+    rating: 4.7,
+    reviews: 142,
+    image: require("../../assets/images/grey.png"),
   },
 ]
 
 const SALE_PRODUCTS = [
   {
-    id: "4",
-    name: "Gaming Mouse",
-    brand: "ZST Gaming",
-    price: "8000DA",
-    originalPrice: "10000DA",
-    discount: 38,
+    id: "5",
+    name: "White North Face",
+    brand: "North Face",
+    price: "7500DA",
+    originalPrice: "9500DA",
+    discount: 21,
     rating: 4.7,
     reviews: 312,
-    image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=400",
+    image: require("../../assets/images/white north face.png"),
   },
   {
-    id: "5",
-    name: "Mechanical KB",
-    brand: "ZST Keys",
-    price: "8000DA",
-    originalPrice: "10000DA",
-    discount: 27,
+    id: "6",
+    name: "Adidas White",
+    brand: "Adidas",
+    price: "6500DA",
+    originalPrice: "8500DA",
+    discount: 24,
     rating: 4.5,
     reviews: 98,
-    image: "https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=400",
+    image: require("../../assets/images/addidaswhite.png"),
   },
 ]
 
@@ -138,7 +149,7 @@ const ProductCard: FC<ProductCardProps> = ({ product, compact }) => {
         {/* Product Image */}
         <View style={styles.productImageContainer}>
           <Image
-            source={{ uri: product.image }}
+            source={product.image}
             style={styles.productImage}
             resizeMode="cover"
           />
