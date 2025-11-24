@@ -1,4 +1,4 @@
-import { FC, useState, useCallback } from "react"
+import { FC, useState, useCallback, useEffect } from "react"
 import {
   View,
   StyleSheet,
@@ -12,11 +12,18 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  ImageStyle,
 } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import { Text } from "@/components/Text"
 import { useSafeAreaInsetsStyle } from "@/utils/useSafeAreaInsetsStyle"
 import { useAuth } from "@/context/AuthContext"
+import {
+  fetchCustomerOrdersByPhone,
+  subscribeToCustomerOrders,
+  CustomerOrder,
+} from "@/services/supabase/orderService"
 
 // Luxurious dark gold palette - Art Deco inspired
 const COLORS = {
@@ -294,6 +301,123 @@ const AuthSignUpScreen: FC<{ onNavigateToSignIn: () => void }> = ({ onNavigateTo
   )
 }
 
+// Order status helper
+const getOrderStatusInfo = (status: string) => {
+  switch (status) {
+    case "pending":
+      return { label: "En attente", color: "#F59E0B", bgColor: "rgba(245, 158, 11, 0.15)" }
+    case "processing":
+      return { label: "En cours", color: "#3B82F6", bgColor: "rgba(59, 130, 246, 0.15)" }
+    case "shipped":
+      return { label: "Expediee", color: COLORS.gold, bgColor: "rgba(201, 162, 39, 0.15)" }
+    case "delivered":
+      return { label: "Livree", color: "#22C55E", bgColor: "rgba(34, 197, 94, 0.15)" }
+    case "cancelled":
+      return { label: "Annulee", color: "#EF4444", bgColor: "rgba(239, 68, 68, 0.15)" }
+    default:
+      return { label: status, color: COLORS.textSecondary, bgColor: "rgba(154, 154, 154, 0.15)" }
+  }
+}
+
+// Order Card Component
+const OrderCard: FC<{ order: CustomerOrder; expanded: boolean; onToggle: () => void }> = ({
+  order,
+  expanded,
+  onToggle,
+}) => {
+  const statusInfo = getOrderStatusInfo(order.status)
+  const date = new Date(order.created_at)
+  const formattedDate = `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getFullYear()}`
+
+  return (
+    <View style={orderStyles.card}>
+      <TouchableOpacity onPress={onToggle} activeOpacity={0.7}>
+        <View style={orderStyles.cardHeader}>
+          <View style={orderStyles.orderInfo}>
+            <Text style={orderStyles.orderNumber}>#{order.order_number}</Text>
+            <Text style={orderStyles.orderDate}>{formattedDate}</Text>
+          </View>
+          <View style={[orderStyles.statusBadge, { backgroundColor: statusInfo.bgColor }]}>
+            <Text style={[orderStyles.statusText, { color: statusInfo.color }]}>{statusInfo.label}</Text>
+          </View>
+        </View>
+
+        <View style={orderStyles.cardSummary}>
+          <Text style={orderStyles.itemCount}>
+            {order.items.length} article{order.items.length > 1 ? "s" : ""}
+          </Text>
+          <Text style={orderStyles.totalPrice}>{(order.total || 0).toLocaleString()} DA</Text>
+        </View>
+      </TouchableOpacity>
+
+      {expanded && (
+        <View style={orderStyles.expandedContent}>
+          <View style={orderStyles.divider} />
+
+          {/* Order Items */}
+          <Text style={orderStyles.sectionLabel}>ARTICLES</Text>
+          {order.items.map((item) => (
+            <View key={item.id} style={orderStyles.itemRow}>
+              {item.product_image ? (
+                <Image source={{ uri: item.product_image }} style={orderStyles.itemImage} />
+              ) : (
+                <View style={orderStyles.itemImagePlaceholder}>
+                  <Text style={orderStyles.itemImagePlaceholderText}>
+                    {item.product_name.charAt(0)}
+                  </Text>
+                </View>
+              )}
+              <View style={orderStyles.itemDetails}>
+                <Text style={orderStyles.itemName} numberOfLines={1}>{item.product_name}</Text>
+                <Text style={orderStyles.itemQty}>Qte: {item.quantity}</Text>
+              </View>
+              <Text style={orderStyles.itemPrice}>{(item.subtotal || 0).toLocaleString()} DA</Text>
+            </View>
+          ))}
+
+          {/* Delivery Info */}
+          <View style={orderStyles.deliverySection}>
+            <Text style={orderStyles.sectionLabel}>LIVRAISON</Text>
+            <Text style={orderStyles.deliveryAddress}>{order.customer_address}</Text>
+            <Text style={orderStyles.deliveryWilaya}>{order.customer_wilaya}</Text>
+          </View>
+
+          {/* Tracking Info */}
+          {order.tracking_number && (
+            <View style={orderStyles.trackingSection}>
+              <Text style={orderStyles.sectionLabel}>SUIVI</Text>
+              <Text style={orderStyles.trackingNumber}>{order.tracking_number}</Text>
+            </View>
+          )}
+
+          {/* Status Timeline */}
+          <View style={orderStyles.timelineSection}>
+            <Text style={orderStyles.sectionLabel}>STATUT</Text>
+            <View style={orderStyles.timeline}>
+              <View style={[orderStyles.timelineStep, orderStyles.timelineStepActive]}>
+                <View style={[orderStyles.timelineDot, orderStyles.timelineDotActive]} />
+                <Text style={orderStyles.timelineLabel}>Commande recue</Text>
+              </View>
+              <View style={[orderStyles.timelineStep, order.status !== "pending" && orderStyles.timelineStepActive]}>
+                <View style={[orderStyles.timelineDot, order.status !== "pending" && orderStyles.timelineDotActive]} />
+                <Text style={orderStyles.timelineLabel}>En traitement</Text>
+              </View>
+              <View style={[orderStyles.timelineStep, (order.status === "shipped" || order.status === "delivered") && orderStyles.timelineStepActive]}>
+                <View style={[orderStyles.timelineDot, (order.status === "shipped" || order.status === "delivered") && orderStyles.timelineDotActive]} />
+                <Text style={orderStyles.timelineLabel}>Expediee</Text>
+              </View>
+              <View style={[orderStyles.timelineStep, order.status === "delivered" && orderStyles.timelineStepActive]}>
+                <View style={[orderStyles.timelineDot, order.status === "delivered" && orderStyles.timelineDotActive]} />
+                <Text style={orderStyles.timelineLabel}>Livree</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+    </View>
+  )
+}
+
 export const ProfileScreen: FC = function ProfileScreen() {
   const $topInsets = useSafeAreaInsetsStyle(["top"])
   const $bottomInsets = useSafeAreaInsetsStyle(["bottom"])
@@ -305,6 +429,37 @@ export const ProfileScreen: FC = function ProfileScreen() {
   const [editPhone, setEditPhone] = useState("")
   const [isSaving, setIsSaving] = useState(false)
   const [focusedInput, setFocusedInput] = useState<string | null>(null)
+
+  // Order history state
+  const [orders, setOrders] = useState<CustomerOrder[]>([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
+
+  // Load orders when user is authenticated
+  useEffect(() => {
+    const loadOrders = async () => {
+      if (isAuthenticated && user?.phone) {
+        setOrdersLoading(true)
+        const customerOrders = await fetchCustomerOrdersByPhone(user.phone)
+        setOrders(customerOrders)
+        setOrdersLoading(false)
+      }
+    }
+
+    loadOrders()
+
+    // Subscribe to real-time updates
+    if (isAuthenticated && user?.phone) {
+      const subscription = subscribeToCustomerOrders(user.phone, () => {
+        loadOrders()
+      })
+
+      return () => {
+        subscription.unsubscribe()
+      }
+    }
+    return undefined
+  }, [isAuthenticated, user?.phone])
 
   const handleSignOut = useCallback(async () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -449,6 +604,39 @@ export const ProfileScreen: FC = function ProfileScreen() {
           )}
         </View>
 
+        {/* Order History Section */}
+        <View style={styles.ordersSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>MES COMMANDES</Text>
+            {orders.length > 0 && (
+              <Text style={styles.orderCount}>{orders.length}</Text>
+            )}
+          </View>
+
+          {ordersLoading ? (
+            <View style={styles.ordersLoading}>
+              <ActivityIndicator size="small" color={COLORS.gold} />
+              <Text style={styles.ordersLoadingText}>Chargement...</Text>
+            </View>
+          ) : orders.length === 0 ? (
+            <View style={styles.noOrders}>
+              <Text style={styles.noOrdersText}>Aucune commande</Text>
+              <Text style={styles.noOrdersSubtext}>
+                {user?.phone ? "Vos commandes apparaitront ici" : "Ajoutez votre numero de telephone pour voir vos commandes"}
+              </Text>
+            </View>
+          ) : (
+            orders.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                expanded={expandedOrderId === order.id}
+                onToggle={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}
+              />
+            ))
+          )}
+        </View>
+
         <View style={styles.signOutSection}>
           <Pressable onPress={handleSignOut} style={({ pressed }) => [styles.signOutButton, pressed && styles.signOutButtonPressed]}>
             <Text style={styles.signOutButtonText}>SIGN OUT</Text>
@@ -545,4 +733,49 @@ const styles = StyleSheet.create({
   decorativeBottom: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingTop: 48 } as ViewStyle,
   decorativeLineSmall: { width: 40, height: 1, backgroundColor: COLORS.gold, opacity: 0.2 } as ViewStyle,
   decorativeDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.gold, marginHorizontal: 12, opacity: 0.4 } as ViewStyle,
+  // Orders section
+  ordersSection: { backgroundColor: COLORS.surface, borderRadius: 8, padding: 24, marginBottom: 24, borderWidth: 1, borderColor: COLORS.inputBorder } as ViewStyle,
+  orderCount: { fontSize: 12, fontWeight: "600", color: COLORS.gold, backgroundColor: "rgba(201, 162, 39, 0.15)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 } as TextStyle,
+  ordersLoading: { alignItems: "center", paddingVertical: 32 } as ViewStyle,
+  ordersLoadingText: { fontSize: 13, color: COLORS.textSecondary, marginTop: 12 } as TextStyle,
+  noOrders: { alignItems: "center", paddingVertical: 32 } as ViewStyle,
+  noOrdersText: { fontSize: 16, color: COLORS.textSecondary, marginBottom: 8 } as TextStyle,
+  noOrdersSubtext: { fontSize: 13, color: COLORS.textMuted, textAlign: "center" } as TextStyle,
+})
+
+// Order card styles
+const orderStyles = StyleSheet.create({
+  card: { backgroundColor: COLORS.surfaceElevated, borderRadius: 8, padding: 16, marginTop: 12, borderWidth: 1, borderColor: COLORS.inputBorder } as ViewStyle,
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 } as ViewStyle,
+  orderInfo: {} as ViewStyle,
+  orderNumber: { fontSize: 14, fontWeight: "600", color: COLORS.text, letterSpacing: 0.5 } as TextStyle,
+  orderDate: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 } as TextStyle,
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 } as ViewStyle,
+  statusText: { fontSize: 10, fontWeight: "700", letterSpacing: 0.5 } as TextStyle,
+  cardSummary: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" } as ViewStyle,
+  itemCount: { fontSize: 13, color: COLORS.textSecondary } as TextStyle,
+  totalPrice: { fontSize: 16, fontWeight: "700", color: COLORS.gold } as TextStyle,
+  expandedContent: { marginTop: 8 } as ViewStyle,
+  divider: { height: 1, backgroundColor: COLORS.inputBorder, marginVertical: 16 } as ViewStyle,
+  sectionLabel: { fontSize: 10, fontWeight: "700", color: COLORS.gold, letterSpacing: 1.5, marginBottom: 12 } as TextStyle,
+  itemRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 } as ViewStyle,
+  itemImage: { width: 48, height: 48, borderRadius: 6, backgroundColor: COLORS.inputBg } as ImageStyle,
+  itemImagePlaceholder: { width: 48, height: 48, borderRadius: 6, backgroundColor: COLORS.inputBg, justifyContent: "center", alignItems: "center" } as ViewStyle,
+  itemImagePlaceholderText: { fontSize: 18, fontWeight: "600", color: COLORS.gold } as TextStyle,
+  itemDetails: { flex: 1, marginLeft: 12 } as ViewStyle,
+  itemName: { fontSize: 14, color: COLORS.text, marginBottom: 2 } as TextStyle,
+  itemQty: { fontSize: 12, color: COLORS.textMuted } as TextStyle,
+  itemPrice: { fontSize: 14, fontWeight: "600", color: COLORS.text } as TextStyle,
+  deliverySection: { marginTop: 16 } as ViewStyle,
+  deliveryAddress: { fontSize: 14, color: COLORS.text, marginBottom: 4 } as TextStyle,
+  deliveryWilaya: { fontSize: 13, color: COLORS.textSecondary } as TextStyle,
+  trackingSection: { marginTop: 16 } as ViewStyle,
+  trackingNumber: { fontSize: 14, color: COLORS.gold, fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" } as TextStyle,
+  timelineSection: { marginTop: 16 } as ViewStyle,
+  timeline: { flexDirection: "row", justifyContent: "space-between" } as ViewStyle,
+  timelineStep: { alignItems: "center", flex: 1, opacity: 0.4 } as ViewStyle,
+  timelineStepActive: { opacity: 1 } as ViewStyle,
+  timelineDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: COLORS.textMuted, marginBottom: 6 } as ViewStyle,
+  timelineDotActive: { backgroundColor: COLORS.gold } as ViewStyle,
+  timelineLabel: { fontSize: 9, color: COLORS.textSecondary, textAlign: "center" } as TextStyle,
 })

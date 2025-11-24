@@ -106,6 +106,137 @@ export const createOrder = async (
   }
 }
 
+// Customer order type for order history
+export interface CustomerOrder {
+  id: string
+  order_number: string
+  total: number
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  payment_status: 'pending' | 'paid' | 'failed' | 'refunded'
+  customer_name: string
+  customer_phone: string
+  customer_address: string
+  customer_wilaya: string
+  tracking_number?: string
+  delivery_date?: string
+  created_at: string
+  items: CustomerOrderItem[]
+}
+
+export interface CustomerOrderItem {
+  id: string
+  product_name: string
+  product_image: string
+  quantity: number
+  price: number
+  subtotal: number
+}
+
+// Fetch orders for a customer by phone number (for guest orders)
+export const fetchCustomerOrdersByPhone = async (phone: string): Promise<CustomerOrder[]> => {
+  try {
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('customer_phone', phone)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching customer orders:', error)
+      return []
+    }
+
+    // Fetch items for each order
+    const ordersWithItems: CustomerOrder[] = await Promise.all(
+      (orders || []).map(async (order) => {
+        const { data: items } = await supabase
+          .from('order_items')
+          .select('*')
+          .eq('order_id', order.id)
+
+        return {
+          ...order,
+          items: (items || []).map(item => ({
+            id: item.id,
+            product_name: item.product_name,
+            product_image: item.product_image,
+            quantity: item.quantity,
+            price: item.price,
+            subtotal: item.subtotal,
+          }))
+        }
+      })
+    )
+
+    return ordersWithItems
+  } catch (error) {
+    console.error('Error in fetchCustomerOrdersByPhone:', error)
+    return []
+  }
+}
+
+// Fetch orders for authenticated user by user_id
+export const fetchCustomerOrdersByUserId = async (userId: string): Promise<CustomerOrder[]> => {
+  try {
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching customer orders:', error)
+      return []
+    }
+
+    // Fetch items for each order
+    const ordersWithItems: CustomerOrder[] = await Promise.all(
+      (orders || []).map(async (order) => {
+        const { data: items } = await supabase
+          .from('order_items')
+          .select('*')
+          .eq('order_id', order.id)
+
+        return {
+          ...order,
+          items: (items || []).map(item => ({
+            id: item.id,
+            product_name: item.product_name,
+            product_image: item.product_image,
+            quantity: item.quantity,
+            price: item.price,
+            subtotal: item.subtotal,
+          }))
+        }
+      })
+    )
+
+    return ordersWithItems
+  } catch (error) {
+    console.error('Error in fetchCustomerOrdersByUserId:', error)
+    return []
+  }
+}
+
+// Subscribe to customer order updates
+export const subscribeToCustomerOrders = (phone: string, onUpdate: (payload: any) => void) => {
+  const subscription = supabase
+    .channel(`customer-orders-${phone}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'orders',
+        filter: `customer_phone=eq.${phone}`,
+      },
+      onUpdate
+    )
+    .subscribe()
+
+  return subscription
+}
+
 // Get product by ID
 export const getProductById = async (productId: string) => {
   try {
