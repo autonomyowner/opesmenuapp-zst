@@ -32,6 +32,7 @@ export interface CreateOrderInput {
   delivery_type: DeliveryType
   delivery_address?: string
   seller_id?: string  // Product seller for order tracking
+  user_id?: string    // Authenticated user who placed the order
 }
 
 // Generate unique order number like website
@@ -56,10 +57,12 @@ export const createOrder = async (
     const subtotal = orderData.quantity * orderData.unit_price
 
     // Create the order with all required fields matching website database
+    // user_id links the order to the authenticated user who placed it
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
         order_number: orderNumber,
+        user_id: orderData.user_id || null,  // Link order to the buyer
         customer_name: orderData.customer_name,
         customer_phone: orderData.customer_phone,
         customer_email: orderData.customer_email || null,

@@ -20,8 +20,7 @@ import { Text } from "@/components/Text"
 import { useSafeAreaInsetsStyle } from "@/utils/useSafeAreaInsetsStyle"
 import { useAuth } from "@/context/AuthContext"
 import {
-  fetchCustomerOrdersByPhone,
-  subscribeToCustomerOrders,
+  fetchCustomerOrdersByUserId,
   CustomerOrder,
 } from "@/services/supabase/orderService"
 
@@ -435,31 +434,21 @@ export const ProfileScreen: FC = function ProfileScreen() {
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
 
-  // Load orders when user is authenticated
+  // Load orders for authenticated user - only their own orders
   useEffect(() => {
     const loadOrders = async () => {
-      if (isAuthenticated && user?.phone) {
+      if (isAuthenticated && user?.id) {
         setOrdersLoading(true)
-        const customerOrders = await fetchCustomerOrdersByPhone(user.phone)
+        const customerOrders = await fetchCustomerOrdersByUserId(user.id)
         setOrders(customerOrders)
         setOrdersLoading(false)
+      } else {
+        setOrders([])
       }
     }
 
     loadOrders()
-
-    // Subscribe to real-time updates
-    if (isAuthenticated && user?.phone) {
-      const subscription = subscribeToCustomerOrders(user.phone, () => {
-        loadOrders()
-      })
-
-      return () => {
-        subscription.unsubscribe()
-      }
-    }
-    return undefined
-  }, [isAuthenticated, user?.phone])
+  }, [isAuthenticated, user?.id])
 
   const handleSignOut = useCallback(async () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -622,7 +611,7 @@ export const ProfileScreen: FC = function ProfileScreen() {
             <View style={styles.noOrders}>
               <Text style={styles.noOrdersText}>Aucune commande</Text>
               <Text style={styles.noOrdersSubtext}>
-                {user?.phone ? "Vos commandes apparaitront ici" : "Ajoutez votre numero de telephone pour voir vos commandes"}
+                Vos commandes apparaitront ici apres votre premier achat
               </Text>
             </View>
           ) : (

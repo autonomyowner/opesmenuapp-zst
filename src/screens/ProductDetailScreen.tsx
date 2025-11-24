@@ -20,6 +20,7 @@ import { Text } from "@/components/Text"
 import { useSafeAreaInsetsStyle } from "@/utils/useSafeAreaInsetsStyle"
 import { ProductWithImage } from "@/services/supabase/productService"
 import { createOrder, WILAYAS, DeliveryType } from "@/services/supabase/orderService"
+import { useAuth } from "@/context/AuthContext"
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window")
 
@@ -49,6 +50,7 @@ interface ProductDetailScreenProps {
 export const ProductDetailScreen: FC<ProductDetailScreenProps> = ({ product, onBack }) => {
   const $topInsets = useSafeAreaInsetsStyle(["top"])
   const $bottomInsets = useSafeAreaInsetsStyle(["bottom"])
+  const { user, isAuthenticated } = useAuth()
 
   const [quantity, setQuantity] = useState(1)
   const [showOrderForm, setShowOrderForm] = useState(false)
@@ -105,6 +107,7 @@ export const ProductDetailScreen: FC<ProductDetailScreenProps> = ({ product, onB
       commune: commune.trim(),
       delivery_type: deliveryType,
       seller_id: (product as any).seller_id,  // Pass seller for order tracking
+      user_id: isAuthenticated && user?.id ? user.id : undefined,  // Link order to authenticated user
     })
 
     setIsSubmitting(false)
