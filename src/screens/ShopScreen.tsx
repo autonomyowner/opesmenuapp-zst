@@ -246,7 +246,7 @@ export const ShopScreen: FC = function ShopScreen() {
         <Text style={styles.headerTitle}>Reels</Text>
         <View style={styles.headerTabs}>
           <Pressable style={styles.headerTab}>
-            <Text style={[styles.headerTabText, styles.headerTabActive]}>For You</Text>
+            <Text style={[styles.headerTabText, styles.headerTabActive]}>Trending</Text>
             <View style={styles.headerTabIndicator} />
           </Pressable>
           <Pressable style={styles.headerTab}>
