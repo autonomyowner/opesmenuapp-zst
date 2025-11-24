@@ -1,4 +1,4 @@
-import { FC, useRef } from "react"
+import { FC, useRef, useState, useEffect, useCallback } from "react"
 import {
   Animated,
   Dimensions,
@@ -10,92 +10,22 @@ import {
   TextStyle,
   View,
   ViewStyle,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native"
 
 import { Text } from "@/components/Text"
 import { useSafeAreaInsetsStyle } from "@/utils/useSafeAreaInsetsStyle"
+import {
+  fetchNewProducts,
+  fetchFournisseurProducts,
+  fetchProductCategories,
+  fetchAllProducts,
+  subscribeToProducts,
+  ProductWithImage,
+} from "@/services/supabase"
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window")
-
-// Mock product data
-const NEW_PRODUCTS = [
-  {
-    id: "1",
-    name: "Black North Face",
-    brand: "North Face",
-    price: "8000DA",
-    originalPrice: "10000DA",
-    discount: 20,
-    rating: 4.8,
-    reviews: 128,
-    image: require("../../assets/images/black north face.png"),
-  },
-  {
-    id: "2",
-    name: "Blue North Face",
-    brand: "North Face",
-    price: "8000DA",
-    originalPrice: "10000DA",
-    discount: 20,
-    rating: 4.6,
-    reviews: 84,
-    image: require("../../assets/images/bluie northface.png"),
-  },
-  {
-    id: "3",
-    name: "Brown Vest",
-    brand: "ZST Wear",
-    price: "7500DA",
-    originalPrice: "9500DA",
-    discount: 21,
-    rating: 4.9,
-    reviews: 256,
-    image: require("../../assets/images/brown.png"),
-  },
-  {
-    id: "4",
-    name: "Grey Vest",
-    brand: "ZST Wear",
-    price: "7000DA",
-    originalPrice: "9000DA",
-    discount: 22,
-    rating: 4.7,
-    reviews: 142,
-    image: require("../../assets/images/grey.png"),
-  },
-]
-
-const SALE_PRODUCTS = [
-  {
-    id: "5",
-    name: "White North Face",
-    brand: "North Face",
-    price: "7500DA",
-    originalPrice: "9500DA",
-    discount: 21,
-    rating: 4.7,
-    reviews: 312,
-    image: require("../../assets/images/white north face.png"),
-  },
-  {
-    id: "6",
-    name: "Adidas White",
-    brand: "Adidas",
-    price: "6500DA",
-    originalPrice: "8500DA",
-    discount: 24,
-    rating: 4.5,
-    reviews: 98,
-    image: require("../../assets/images/addidaswhite.png"),
-  },
-]
-
-const CATEGORIES = [
-  { id: "1", name: "Audio", count: 124 },
-  { id: "2", name: "Wearables", count: 89 },
-  { id: "3", name: "Gaming", count: 156 },
-  { id: "4", name: "Smart Home", count: 67 },
-]
 
 // Colors
 const COLORS = {
@@ -111,11 +41,12 @@ const COLORS = {
 }
 
 interface ProductCardProps {
-  product: (typeof NEW_PRODUCTS)[0]
+  product: ProductWithImage
   compact?: boolean
+  horizontal?: boolean
 }
 
-const ProductCard: FC<ProductCardProps> = ({ product, compact }) => {
+const ProductCard: FC<ProductCardProps> = ({ product, compact, horizontal }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current
 
   const handlePressIn = () => {
@@ -133,26 +64,46 @@ const ProductCard: FC<ProductCardProps> = ({ product, compact }) => {
     }).start()
   }
 
+  // Calculate discount percentage
+  const discount = product.original_price
+    ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
+    : 0
+
+  // Determine card style based on props
+  const getCardStyle = () => {
+    if (compact) return styles.productCardCompact
+    if (horizontal) return styles.productCardHorizontal
+    return styles.productCard
+  }
+
   return (
     <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut}>
       <Animated.View
         style={[
-          compact ? styles.productCardCompact : styles.productCard,
+          getCardStyle(),
           { transform: [{ scale: scaleAnim }] },
         ]}
       >
         {/* Discount Badge */}
-        <View style={styles.discountBadge}>
-          <Text style={styles.discountText}>-{product.discount}%</Text>
-        </View>
+        {discount > 0 && (
+          <View style={styles.discountBadge}>
+            <Text style={styles.discountText}>-{discount}%</Text>
+          </View>
+        )}
 
         {/* Product Image */}
         <View style={styles.productImageContainer}>
-          <Image
-            source={product.image}
-            style={styles.productImage}
-            resizeMode="cover"
-          />
+          {product.image_url ? (
+            <Image
+              source={{ uri: product.image_url }}
+              style={styles.productImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Text style={styles.imagePlaceholderText}>{product.name.charAt(0)}</Text>
+            </View>
+          )}
         </View>
 
         {/* Wishlist Button */}
@@ -163,11 +114,13 @@ const ProductCard: FC<ProductCardProps> = ({ product, compact }) => {
         {/* Product Info */}
         <View style={styles.productInfo}>
           {/* Rating */}
-          <View style={styles.ratingContainer}>
-            <Text style={styles.starIcon}>&#9733;</Text>
-            <Text style={styles.ratingText}>{product.rating}</Text>
-            <Text style={styles.reviewsText}>({product.reviews})</Text>
-          </View>
+          {product.rating && (
+            <View style={styles.ratingContainer}>
+              <Text style={styles.starIcon}>&#9733;</Text>
+              <Text style={styles.ratingText}>{product.rating.toFixed(1)}</Text>
+              <Text style={styles.reviewsText}>({product.viewers_count})</Text>
+            </View>
+          )}
 
           <Text style={styles.brandText}>{product.brand}</Text>
           <Text style={styles.productName} numberOfLines={1}>
@@ -176,7 +129,10 @@ const ProductCard: FC<ProductCardProps> = ({ product, compact }) => {
 
           {/* Price */}
           <View style={styles.priceContainer}>
-            <Text style={styles.productPrice}>{product.originalPrice}</Text>
+            <Text style={styles.productPrice}>{product.price.toLocaleString('fr-DZ')} DA</Text>
+            {product.original_price && product.original_price > product.price && (
+              <Text style={styles.originalPrice}>{product.original_price.toLocaleString('fr-DZ')} DA</Text>
+            )}
           </View>
         </View>
       </Animated.View>
@@ -190,6 +146,67 @@ interface MarketplaceScreenProps {
 
 export const MarketplaceScreen: FC<MarketplaceScreenProps> = function MarketplaceScreen({ onNavigateToCart }) {
   const $topInsets = useSafeAreaInsetsStyle(["top"])
+  const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [newProducts, setNewProducts] = useState<ProductWithImage[]>([])
+  const [saleProducts, setSaleProducts] = useState<ProductWithImage[]>([])
+  const [categories, setCategories] = useState<string[]>([])
+
+  // Fetch data from Supabase
+  const loadData = useCallback(async () => {
+    try {
+      const [newProds, fournisseurProds, cats] = await Promise.all([
+        fetchNewProducts(10),
+        fetchFournisseurProducts(20),
+        fetchProductCategories(),
+      ])
+
+      // If no "new" products, fetch all products
+      if (newProds.length === 0) {
+        const allProducts = await fetchAllProducts()
+        setNewProducts(allProducts.slice(0, 10))
+      } else {
+        setNewProducts(newProds)
+      }
+
+      // Display products from fournisseurs in the Sale section
+      if (fournisseurProds.length === 0) {
+        // Fallback: if no fournisseur products, show all products
+        const allProducts = await fetchAllProducts()
+        setSaleProducts(allProducts.slice(0, 10))
+      } else {
+        setSaleProducts(fournisseurProds)
+      }
+
+      setCategories(cats)
+    } catch (error) {
+      console.error('Error loading marketplace data:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Initial load
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  // Real-time subscription
+  useEffect(() => {
+    const subscription = subscribeToProducts(() => {
+      loadData()
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [loadData])
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await loadData()
+    setRefreshing(false)
+  }, [loadData])
 
   return (
     <View style={[styles.container, $topInsets]}>
@@ -197,6 +214,14 @@ export const MarketplaceScreen: FC<MarketplaceScreenProps> = function Marketplac
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.accent}
+            colors={[COLORS.accent]}
+          />
+        }
       >
         {/* Header */}
         <View style={styles.header}>
@@ -209,9 +234,6 @@ export const MarketplaceScreen: FC<MarketplaceScreenProps> = function Marketplac
               <Text style={styles.iconText}>&#128269;</Text>
             </Pressable>
             <Pressable style={styles.iconButton} onPress={onNavigateToCart}>
-              <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>3</Text>
-              </View>
               <Text style={styles.iconText}>&#128722;</Text>
             </Pressable>
           </View>
@@ -221,8 +243,8 @@ export const MarketplaceScreen: FC<MarketplaceScreenProps> = function Marketplac
         <View style={styles.heroBanner}>
           <View style={styles.heroContent}>
             <Text style={styles.heroLabel}>NEW COLLECTION</Text>
-            <Text style={styles.heroTitle}>Premium{"\n"}Tech Gear</Text>
-            <Text style={styles.heroSubtitle}>Discover the future of technology</Text>
+            <Text style={styles.heroTitle}>Premium{"\n"}Products</Text>
+            <Text style={styles.heroSubtitle}>Discover the best deals</Text>
             <Pressable style={styles.heroButton}>
               <Text style={styles.heroButtonText}>EXPLORE NOW</Text>
             </Pressable>
@@ -231,19 +253,20 @@ export const MarketplaceScreen: FC<MarketplaceScreenProps> = function Marketplac
         </View>
 
         {/* Categories */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoriesContainer}
-          contentContainerStyle={styles.categoriesContent}
-        >
-          {CATEGORIES.map((category) => (
-            <Pressable key={category.id} style={styles.categoryChip}>
-              <Text style={styles.categoryName}>{category.name}</Text>
-              <Text style={styles.categoryCount}>{category.count}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        {categories.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoriesContainer}
+            contentContainerStyle={styles.categoriesContent}
+          >
+            {categories.map((category, index) => (
+              <Pressable key={index} style={styles.categoryChip}>
+                <Text style={styles.categoryName}>{category}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
 
         {/* New Products Section */}
         <View style={styles.section}>
@@ -257,38 +280,53 @@ export const MarketplaceScreen: FC<MarketplaceScreenProps> = function Marketplac
             </Pressable>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.productsRow}
-          >
-            {NEW_PRODUCTS.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </ScrollView>
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={COLORS.accent} />
+            </View>
+          ) : newProducts.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.productsRow}
+            >
+              {newProducts.map((product) => (
+                <ProductCard key={product.id} product={product} horizontal />
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No products available</Text>
+            </View>
+          )}
         </View>
 
-        {/* Sale Section */}
+        {/* Fournisseur Products Section (Sale) - Vertical Grid */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View>
               <Text style={styles.saleSectionTitle}>Sale</Text>
-              <Text style={styles.sectionSubtitle}>Super summer sale</Text>
+              <Text style={styles.sectionSubtitle}>Products from our suppliers</Text>
             </View>
-            <Pressable>
-              <Text style={styles.viewAllText}>View all</Text>
-            </Pressable>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.productsRow}
-          >
-            {SALE_PRODUCTS.map((product) => (
-              <ProductCard key={product.id} product={product} compact />
-            ))}
-          </ScrollView>
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={COLORS.accent} />
+            </View>
+          ) : saleProducts.length > 0 ? (
+            <View style={styles.productsGrid}>
+              {saleProducts.map((product) => (
+                <View key={product.id} style={styles.gridItem}>
+                  <ProductCard product={product} />
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No products available</Text>
+            </View>
+          )}
         </View>
 
         {/* Spacer for bottom nav */}
@@ -513,8 +551,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   } as ViewStyle,
 
+  // Vertical Grid for Sale products
+  productsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 16,
+    justifyContent: "space-between",
+  } as ViewStyle,
+
+  gridItem: {
+    width: (SCREEN_WIDTH - 48) / 2,
+    marginBottom: 16,
+  } as ViewStyle,
+
   // Product Card
   productCard: {
+    width: "100%",
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    overflow: "hidden",
+  } as ViewStyle,
+
+  productCardHorizontal: {
     width: SCREEN_WIDTH * 0.44,
     backgroundColor: COLORS.surface,
     borderRadius: 16,
@@ -626,5 +684,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     color: COLORS.accent,
+  } as TextStyle,
+
+  originalPrice: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    textDecorationLine: "line-through",
+    marginLeft: 6,
+  } as TextStyle,
+
+  imagePlaceholder: {
+    flex: 1,
+    backgroundColor: COLORS.surfaceElevated,
+    justifyContent: "center",
+    alignItems: "center",
+  } as ViewStyle,
+
+  imagePlaceholderText: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: COLORS.accent,
+  } as TextStyle,
+
+  loadingContainer: {
+    height: 200,
+    justifyContent: "center",
+    alignItems: "center",
+  } as ViewStyle,
+
+  emptyState: {
+    height: 100,
+    justifyContent: "center",
+    alignItems: "center",
+  } as ViewStyle,
+
+  emptyStateText: {
+    fontSize: 14,
+    color: COLORS.textMuted,
   } as TextStyle,
 })

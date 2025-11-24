@@ -28,7 +28,7 @@ const COLORS = {
 const TABS = [
   { key: "home", label: "Home", icon: "🏠" },
   { key: "shop", label: "Shop", icon: "🛍" },
-  { key: "cart", label: "Cart", icon: "🛒" },
+  { key: "freelance", label: "Freelance", icon: "💼" },
   { key: "dashboard", label: "Dashboard", icon: "📊" },
   { key: "profile", label: "Profile", icon: "👤" },
 ]
