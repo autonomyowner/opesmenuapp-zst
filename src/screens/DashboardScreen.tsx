@@ -39,6 +39,7 @@ import {
   NewProductInput,
 } from "@/services/supabase/sellerService.cached"
 import { fetchProductCategories } from "@/services/supabase/productService.cached"
+import { getProductCategories } from "@/services/supabase/sellerService"
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
@@ -548,6 +549,9 @@ export const DashboardScreen: FC = function DashboardScreen() {
 
   const loadDashboardData = useCallback(async () => {
     if (!user?.id || !isSeller) return
+
+    // Always invalidate stale cache before fetching fresh data
+    await invalidateSellerCaches(user.id)
 
     try {
       const [statsData, ordersData, productsData, categoriesData, allOrdersData] = await Promise.all([
