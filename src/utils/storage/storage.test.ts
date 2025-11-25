@@ -1,61 +1,53 @@
-import { load, loadString, save, saveString, clear, remove, storage } from "."
+import { load, loadString, save, saveString, clear, remove } from "."
 
 const VALUE_OBJECT = { x: 1 }
 const VALUE_STRING = JSON.stringify(VALUE_OBJECT)
 
-describe("MMKV Storage", () => {
-  beforeEach(() => {
-    storage.clearAll()
-    storage.set("string", "string")
-    storage.set("object", JSON.stringify(VALUE_OBJECT))
+describe("AsyncStorage", () => {
+  beforeEach(async () => {
+    await clear()
+    await saveString("string", "string")
+    await saveString("object", JSON.stringify(VALUE_OBJECT))
   })
 
-  it("should be defined", () => {
-    expect(storage).toBeDefined()
+  it("should load data", async () => {
+    expect(await load<object>("object")).toEqual(VALUE_OBJECT)
+    expect(await loadString("object")).toEqual(VALUE_STRING)
+
+    expect(await load<string>("string")).toEqual("string")
+    expect(await loadString("string")).toEqual("string")
   })
 
-  it("should have default keys", () => {
-    expect(storage.getAllKeys()).toEqual(["string", "object"])
+  it("should save strings", async () => {
+    await saveString("string", "new string")
+    expect(await loadString("string")).toEqual("new string")
   })
 
-  it("should load data", () => {
-    expect(load<object>("object")).toEqual(VALUE_OBJECT)
-    expect(loadString("object")).toEqual(VALUE_STRING)
-
-    expect(load<string>("string")).toEqual("string")
-    expect(loadString("string")).toEqual("string")
+  it("should save objects", async () => {
+    await save("object", { y: 2 })
+    expect(await load<object>("object")).toEqual({ y: 2 })
+    await save("object", { z: 3, also: true })
+    expect(await load<object>("object")).toEqual({ z: 3, also: true })
   })
 
-  it("should save strings", () => {
-    saveString("string", "new string")
-    expect(loadString("string")).toEqual("new string")
+  it("should save strings and objects", async () => {
+    await saveString("object", "new string")
+    expect(await loadString("object")).toEqual("new string")
   })
 
-  it("should save objects", () => {
-    save("object", { y: 2 })
-    expect(load<object>("object")).toEqual({ y: 2 })
-    save("object", { z: 3, also: true })
-    expect(load<object>("object")).toEqual({ z: 3, also: true })
+  it("should remove data", async () => {
+    await remove("object")
+    expect(await load<object>("object")).toBeNull()
+
+    await remove("string")
+    expect(await load<string>("string")).toBeNull()
   })
 
-  it("should save strings and objects", () => {
-    saveString("object", "new string")
-    expect(loadString("object")).toEqual("new string")
-  })
-
-  it("should remove data", () => {
-    remove("object")
-    expect(load<object>("object")).toBeNull()
-    expect(storage.getAllKeys()).toEqual(["string"])
-
-    remove("string")
-    expect(load<string>("string")).toBeNull()
-    expect(storage.getAllKeys()).toEqual([])
-  })
-
-  it("should clear all data", () => {
-    expect(storage.getAllKeys()).toEqual(["string", "object"])
-    clear()
-    expect(storage.getAllKeys()).toEqual([])
+  it("should clear all data", async () => {
+    await saveString("test1", "value1")
+    await saveString("test2", "value2")
+    await clear()
+    expect(await loadString("test1")).toBeNull()
+    expect(await loadString("test2")).toBeNull()
   })
 })

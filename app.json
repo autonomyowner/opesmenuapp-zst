@@ -6,9 +6,6 @@
   "orientation": "portrait",
   "userInterfaceStyle": "automatic",
   "icon": "./assets/images/app-icon-all.png",
-  "updates": {
-    "fallbackToCacheTimeout": 0
-  },
   "newArchEnabled": true,
   "jsEngine": "hermes",
   "assetBundlePatterns": [
