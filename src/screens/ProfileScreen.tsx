@@ -14,6 +14,7 @@ import {
   Platform,
   Image,
   ImageStyle,
+  Linking,
 } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import { Text } from "@/components/Text"
@@ -23,6 +24,12 @@ import {
   fetchCustomerOrdersByUserId,
   CustomerOrder,
 } from "@/services/supabase/orderService"
+
+// Legal URLs
+const LEGAL_URLS = {
+  privacyPolicy: "https://www.zsst.xyz/privacy-policy",
+  termsOfService: "https://www.zsst.xyz/terms-of-service",
+}
 
 // Luxurious dark gold palette - Art Deco inspired
 const COLORS = {
@@ -109,6 +116,46 @@ const googleButtonStyles = StyleSheet.create({
     fontWeight: "500",
     color: COLORS.text,
     letterSpacing: 0.3,
+  } as TextStyle,
+})
+
+// Legal Links Component
+const LegalLinks: FC<{ style?: ViewStyle }> = ({ style }) => {
+  const handleOpenLink = useCallback((url: string) => {
+    Linking.openURL(url).catch(() => {
+      Alert.alert("Error", "Could not open link")
+    })
+  }, [])
+
+  return (
+    <View style={[legalLinksStyles.container, style]}>
+      <TouchableOpacity onPress={() => handleOpenLink(LEGAL_URLS.privacyPolicy)}>
+        <Text style={legalLinksStyles.link}>Privacy Policy</Text>
+      </TouchableOpacity>
+      <Text style={legalLinksStyles.separator}>|</Text>
+      <TouchableOpacity onPress={() => handleOpenLink(LEGAL_URLS.termsOfService)}>
+        <Text style={legalLinksStyles.link}>Terms of Service</Text>
+      </TouchableOpacity>
+    </View>
+  )
+}
+
+const legalLinksStyles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 24,
+  } as ViewStyle,
+  link: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textDecorationLine: "underline",
+  } as TextStyle,
+  separator: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginHorizontal: 12,
   } as TextStyle,
 })
 
@@ -381,6 +428,11 @@ const AuthSignUpScreen: FC<{ onNavigateToSignIn: () => void }> = ({ onNavigateTo
                 <Text style={authStyles.switchLink}>Sign In</Text>
               </TouchableOpacity>
             </View>
+
+            <Text style={authStyles.legalNotice}>
+              By creating an account, you agree to our Terms of Service and Privacy Policy
+            </Text>
+            <LegalLinks />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -720,6 +772,8 @@ export const ProfileScreen: FC = function ProfileScreen() {
           </Pressable>
         </View>
 
+        <LegalLinks style={{ marginTop: 32 }} />
+
         <View style={styles.decorativeBottom}>
           <View style={styles.decorativeLineSmall} />
           <View style={styles.decorativeDot} />
@@ -765,6 +819,7 @@ const authStyles = StyleSheet.create({
   switchContainer: { flexDirection: "row", justifyContent: "center", alignItems: "center" } as ViewStyle,
   switchText: { fontSize: 14, color: COLORS.textSecondary } as TextStyle,
   switchLink: { fontSize: 14, fontWeight: "600", color: COLORS.gold, letterSpacing: 0.3 } as TextStyle,
+  legalNotice: { fontSize: 11, color: COLORS.textMuted, textAlign: "center", marginTop: 24, lineHeight: 16 } as TextStyle,
 })
 
 // Profile screen styles

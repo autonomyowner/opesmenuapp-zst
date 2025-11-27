@@ -1159,9 +1159,11 @@ export const B2BMarketplaceScreen: FC<B2BMarketplaceScreenProps> = ({ onBack }) 
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.greeting}>Bienvenue,</Text>
-          <Text style={styles.userName}>{user?.full_name || "Vendeur"}</Text>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryBadgeText}>{getCategoryLabel(userCategory)}</Text>
+          <View style={styles.userRow}>
+            <Text style={styles.userName}>{user?.full_name || "Vendeur"}</Text>
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText}>{getCategoryLabel(userCategory)}</Text>
+            </View>
           </View>
         </View>
       </View>
@@ -1454,14 +1456,17 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
   } as TextStyle,
+  userRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  } as ViewStyle,
   userName: {
     fontSize: 24,
     fontWeight: "700",
     color: COLORS.text,
-    marginBottom: 8,
   } as TextStyle,
   categoryBadge: {
-    alignSelf: "flex-start",
     paddingHorizontal: 12,
     paddingVertical: 4,
     backgroundColor: COLORS.goldMuted,

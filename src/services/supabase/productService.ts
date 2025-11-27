@@ -22,8 +22,10 @@ export interface PaginatedProducts {
 const DEFAULT_PAGE_SIZE = 20
 
 // Helper function to check if image URL is valid (exists in storage)
+// NOTE: Returns true for missing images so products still show (with placeholder)
 const isValidImageUrl = (imageUrl: string | undefined): boolean => {
-  if (!imageUrl) return false
+  // Allow products without images to show (they'll display a placeholder)
+  if (!imageUrl) return true
   // Full URLs are valid
   if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
     return true
@@ -306,7 +308,7 @@ export const fetchProductCategories = async (): Promise<string[]> => {
   }
 }
 
-// Subscribe to real-time product updates
+// Subscribe to real-time product updates (including images)
 export const subscribeToProducts = (onUpdate: (payload: any) => void) => {
   const subscription = supabase
     .channel('products-channel')
@@ -316,6 +318,15 @@ export const subscribeToProducts = (onUpdate: (payload: any) => void) => {
         event: '*',
         schema: 'public',
         table: 'products',
+      },
+      onUpdate
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'product_images',
       },
       onUpdate
     )
@@ -548,5 +559,137 @@ export const searchProductsPaginated = async (
   } catch (error) {
     console.error('Error in searchProductsPaginated:', error)
     return { products: [], totalCount: 0, hasMore: false, nextPage: 0 }
+  }
+}
+
+// ============================================
+// PRODUCT REELS (For Shop/Reels screen)
+// ============================================
+
+// Product reel type with seller info
+export interface ProductReel {
+  id: string
+  product_id: string
+  video_url: string
+  thumbnail_url?: string
+  duration_seconds?: number
+  product_name: string
+  product_price: number
+  product_slug: string
+  seller_id: string
+  seller_name: string
+  seller_avatar?: string
+  created_at: string
+}
+
+// Fetch product reels with seller info for the Reels/Shop screen
+export const fetchProductReels = async (limit: number = 20): Promise<ProductReel[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('product_videos')
+      .select(`
+        id,
+        product_id,
+        video_url,
+        thumbnail_url,
+        duration_seconds,
+        created_at,
+        products!inner (
+          name,
+          price,
+          slug,
+          seller_id,
+          in_stock
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      console.error('Error fetching product reels:', error)
+      throw error
+    }
+
+    if (!data || data.length === 0) {
+      return []
+    }
+
+    // Get seller IDs to fetch their profiles
+    const sellerIds = [...new Set(data.map((item: any) => item.products?.seller_id).filter(Boolean))]
+
+    // Fetch seller profiles
+    const { data: sellers } = await supabase
+      .from('user_profiles')
+      .select('id, full_name, provider_avatar')
+      .in('id', sellerIds)
+
+    const sellerMap = new Map(sellers?.map(s => [s.id, s]) || [])
+
+    // Transform data
+    return data
+      .filter((item: any) => item.products?.in_stock !== false)
+      .map((item: any) => {
+        const seller = sellerMap.get(item.products?.seller_id)
+        return {
+          id: item.id,
+          product_id: item.product_id,
+          video_url: item.video_url,
+          thumbnail_url: item.thumbnail_url,
+          duration_seconds: item.duration_seconds,
+          product_name: item.products?.name || 'Unknown Product',
+          product_price: parseFloat(item.products?.price) || 0,
+          product_slug: item.products?.slug || '',
+          seller_id: item.products?.seller_id || '',
+          seller_name: seller?.full_name || 'Unknown Seller',
+          seller_avatar: seller?.provider_avatar,
+          created_at: item.created_at,
+        }
+      })
+  } catch (error) {
+    console.error('Error in fetchProductReels:', error)
+    return []
+  }
+}
+
+// Subscribe to real-time product video updates
+export const subscribeToProductReels = (onUpdate: (payload: any) => void) => {
+  const subscription = supabase
+    .channel('product-reels-channel')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'product_videos',
+      },
+      onUpdate
+    )
+    .subscribe()
+
+  return subscription
+}
+
+// Fetch full product details by ID (for navigating from reel to product page)
+export const fetchProductById = async (productId: string): Promise<ProductWithImage | null> => {
+  try {
+    const { data: product, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        product_images(image_url, is_primary),
+        product_videos(video_url)
+      `)
+      .eq('id', productId)
+      .single()
+
+    if (error) {
+      console.error('Error fetching product by ID:', error)
+      return null
+    }
+
+    return transformProduct(product)
+  } catch (error) {
+    console.error('Error in fetchProductById:', error)
+    return null
   }
 }
