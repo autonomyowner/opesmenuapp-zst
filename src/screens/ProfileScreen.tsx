@@ -196,24 +196,24 @@ const AuthSignInScreen: FC<{ onNavigateToSignUp: () => void }> = ({ onNavigateTo
   }, [signInWithGoogle])
 
   return (
-    <View style={[authStyles.container, $topInsets]}>
+    <View style={authStyles.container}>
       <LinearGradient
         colors={["#0A0A0A", "#111111", "#0A0A0A"]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      <View style={authStyles.decorativeTop}>
-        <View style={authStyles.decorativeLine} />
-        <View style={authStyles.decorativeDiamond} />
-        <View style={authStyles.decorativeLine} />
-      </View>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView
-          contentContainerStyle={[authStyles.scrollContent, $bottomInsets]}
+          contentContainerStyle={authStyles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          <View style={authStyles.decorativeTop}>
+            <View style={authStyles.decorativeLine} />
+            <View style={authStyles.decorativeDiamond} />
+            <View style={authStyles.decorativeLine} />
+          </View>
           <View>
             <Text style={authStyles.welcomeText}>WELCOME BACK</Text>
             <Text style={authStyles.title}>Sign In</Text>
@@ -344,15 +344,15 @@ const AuthSignUpScreen: FC<{ onNavigateToSignIn: () => void }> = ({ onNavigateTo
   }, [signInWithGoogle])
 
   return (
-    <View style={[authStyles.container, $topInsets]}>
+    <View style={authStyles.container}>
       <LinearGradient colors={["#0A0A0A", "#111111", "#0A0A0A"]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-      <View style={authStyles.decorativeTop}>
-        <View style={authStyles.decorativeLine} />
-        <View style={authStyles.decorativeDiamond} />
-        <View style={authStyles.decorativeLine} />
-      </View>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={[authStyles.scrollContent, $bottomInsets]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={authStyles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <View style={authStyles.decorativeTop}>
+            <View style={authStyles.decorativeLine} />
+            <View style={authStyles.decorativeDiamond} />
+            <View style={authStyles.decorativeLine} />
+          </View>
           <View>
             <Text style={authStyles.welcomeText}>JOIN US</Text>
             <Text style={authStyles.title}>Create Account</Text>
@@ -787,12 +787,12 @@ export const ProfileScreen: FC = function ProfileScreen() {
 // Auth screen styles
 const authStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background } as ViewStyle,
-  scrollContent: { flexGrow: 1, paddingHorizontal: 32, paddingTop: 40, paddingBottom: 24 } as ViewStyle,
-  decorativeTop: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingTop: 16, paddingHorizontal: 32 } as ViewStyle,
+  scrollContent: { flexGrow: 1, paddingHorizontal: 32, paddingTop: 20, paddingBottom: 100 } as ViewStyle,
+  decorativeTop: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingTop: 80, paddingBottom: 24, marginHorizontal: -32, paddingHorizontal: 32 } as ViewStyle,
   decorativeLine: { flex: 1, height: 1, backgroundColor: COLORS.gold, opacity: 0.3 } as ViewStyle,
   decorativeDiamond: { width: 8, height: 8, backgroundColor: COLORS.gold, transform: [{ rotate: "45deg" }], marginHorizontal: 16 } as ViewStyle,
   welcomeText: { fontSize: 11, fontWeight: "600", color: COLORS.gold, letterSpacing: 4, marginBottom: 8 } as TextStyle,
-  title: { fontSize: 42, fontWeight: "200", color: COLORS.text, letterSpacing: 2, marginBottom: 8 } as TextStyle,
+  title: { fontSize: 28, fontWeight: "300", color: COLORS.text, letterSpacing: 2, marginBottom: 8 } as TextStyle,
   subtitle: { fontSize: 14, color: COLORS.textSecondary, letterSpacing: 0.5, marginBottom: 48 } as TextStyle,
   formContainer: { flex: 1 } as ViewStyle,
   inputGroup: { marginBottom: 24 } as ViewStyle,
@@ -816,9 +816,9 @@ const authStyles = StyleSheet.create({
   divider: { flexDirection: "row", alignItems: "center", marginBottom: 32 } as ViewStyle,
   dividerLine: { flex: 1, height: 1, backgroundColor: COLORS.inputBorder } as ViewStyle,
   dividerText: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 2, marginHorizontal: 20 } as TextStyle,
-  switchContainer: { flexDirection: "row", justifyContent: "center", alignItems: "center" } as ViewStyle,
-  switchText: { fontSize: 14, color: COLORS.textSecondary } as TextStyle,
-  switchLink: { fontSize: 14, fontWeight: "600", color: COLORS.gold, letterSpacing: 0.3 } as TextStyle,
+  switchContainer: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginTop: 24, paddingVertical: 16, backgroundColor: "rgba(201, 162, 39, 0.08)", borderRadius: 8, marginHorizontal: -8, paddingHorizontal: 16 } as ViewStyle,
+  switchText: { fontSize: 15, color: COLORS.text, fontWeight: "400" } as TextStyle,
+  switchLink: { fontSize: 15, fontWeight: "700", color: COLORS.gold, letterSpacing: 0.5, textDecorationLine: "underline" } as TextStyle,
   legalNotice: { fontSize: 11, color: COLORS.textMuted, textAlign: "center", marginTop: 24, lineHeight: 16 } as TextStyle,
 })
 
