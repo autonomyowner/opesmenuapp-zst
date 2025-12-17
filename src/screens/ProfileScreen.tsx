@@ -310,6 +310,8 @@ const AuthSignUpScreen: FC<{ onNavigateToSignIn: () => void }> = ({ onNavigateTo
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [accountType, setAccountType] = useState<"customer" | "seller" | "freelancer">("customer")
+  const [sellerCategory, setSellerCategory] = useState<"fournisseur" | "grossiste" | "importateur">("fournisseur")
   const [error, setError] = useState("")
   const [focusedInput, setFocusedInput] = useState<string | null>(null)
 
@@ -329,11 +331,13 @@ const AuthSignUpScreen: FC<{ onNavigateToSignIn: () => void }> = ({ onNavigateTo
       password,
       fullName: fullName.trim(),
       phone: phone.trim() || undefined,
+      role: accountType,
+      sellerCategory: accountType === "seller" ? sellerCategory : undefined,
     })
     if (!response.success) {
       setError(response.error || "Sign up failed")
     }
-  }, [fullName, email, phone, password, confirmPassword, signUp])
+  }, [fullName, email, phone, password, confirmPassword, accountType, sellerCategory, signUp])
 
   const handleGoogleSignIn = useCallback(async () => {
     setError("")
@@ -383,6 +387,77 @@ const AuthSignUpScreen: FC<{ onNavigateToSignIn: () => void }> = ({ onNavigateTo
                 <TextInput style={authStyles.input} placeholder="Enter your phone" placeholderTextColor={COLORS.textMuted} value={phone} onChangeText={setPhone} keyboardType="phone-pad" onFocus={() => setFocusedInput("phone")} onBlur={() => setFocusedInput(null)} />
               </View>
             </View>
+
+            <View style={authStyles.inputGroup}>
+              <Text style={authStyles.inputLabel}>ACCOUNT TYPE</Text>
+              <View style={authStyles.accountTypeContainer}>
+                <TouchableOpacity
+                  style={[authStyles.accountTypeButton, accountType === "customer" && authStyles.accountTypeButtonActive]}
+                  onPress={() => setAccountType("customer")}
+                >
+                  <Text style={[authStyles.accountTypeButtonText, accountType === "customer" && authStyles.accountTypeButtonTextActive]}>
+                    Customer
+                  </Text>
+                  <Text style={authStyles.accountTypeButtonSubtext}>Buy products</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[authStyles.accountTypeButton, accountType === "seller" && authStyles.accountTypeButtonActive]}
+                  onPress={() => setAccountType("seller")}
+                >
+                  <Text style={[authStyles.accountTypeButtonText, accountType === "seller" && authStyles.accountTypeButtonTextActive]}>
+                    Seller
+                  </Text>
+                  <Text style={authStyles.accountTypeButtonSubtext}>Sell products</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[authStyles.accountTypeButton, accountType === "freelancer" && authStyles.accountTypeButtonActive]}
+                  onPress={() => setAccountType("freelancer")}
+                >
+                  <Text style={[authStyles.accountTypeButtonText, accountType === "freelancer" && authStyles.accountTypeButtonTextActive]}>
+                    Freelancer
+                  </Text>
+                  <Text style={authStyles.accountTypeButtonSubtext}>Offer services</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {accountType === "seller" && (
+              <View style={authStyles.inputGroup}>
+                <Text style={authStyles.inputLabel}>SELLER CATEGORY</Text>
+                <View style={authStyles.sellerCategoryContainer}>
+                  <TouchableOpacity
+                    style={[authStyles.sellerCategoryButton, sellerCategory === "fournisseur" && authStyles.sellerCategoryButtonActive]}
+                    onPress={() => setSellerCategory("fournisseur")}
+                  >
+                    <Text style={[authStyles.sellerCategoryButtonText, sellerCategory === "fournisseur" && authStyles.sellerCategoryButtonTextActive]}>
+                      Fournisseur
+                    </Text>
+                    <Text style={authStyles.sellerCategoryButtonSubtext}>Retailer - Sell to customers</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[authStyles.sellerCategoryButton, sellerCategory === "grossiste" && authStyles.sellerCategoryButtonActive]}
+                    onPress={() => setSellerCategory("grossiste")}
+                  >
+                    <Text style={[authStyles.sellerCategoryButtonText, sellerCategory === "grossiste" && authStyles.sellerCategoryButtonTextActive]}>
+                      Grossiste
+                    </Text>
+                    <Text style={authStyles.sellerCategoryButtonSubtext}>Wholesaler - Sell to retailers</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[authStyles.sellerCategoryButton, sellerCategory === "importateur" && authStyles.sellerCategoryButtonActive]}
+                    onPress={() => setSellerCategory("importateur")}
+                  >
+                    <Text style={[authStyles.sellerCategoryButtonText, sellerCategory === "importateur" && authStyles.sellerCategoryButtonTextActive]}>
+                      Importateur
+                    </Text>
+                    <Text style={authStyles.sellerCategoryButtonSubtext}>Importer - Sell to wholesalers</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={authStyles.sellerCategoryHint}>
+                  Determines the B2B space you'll access in the seller dashboard
+                </Text>
+              </View>
+            )}
 
             <View style={authStyles.inputGroup}>
               <Text style={authStyles.inputLabel}>PASSWORD</Text>
@@ -820,6 +895,19 @@ const authStyles = StyleSheet.create({
   switchText: { fontSize: 15, color: COLORS.text, fontWeight: "400" } as TextStyle,
   switchLink: { fontSize: 15, fontWeight: "700", color: COLORS.gold, letterSpacing: 0.5, textDecorationLine: "underline" } as TextStyle,
   legalNotice: { fontSize: 11, color: COLORS.textMuted, textAlign: "center", marginTop: 24, lineHeight: 16 } as TextStyle,
+  accountTypeContainer: { gap: 12 } as ViewStyle,
+  accountTypeButton: { backgroundColor: COLORS.inputBg, borderWidth: 1, borderColor: COLORS.inputBorder, borderRadius: 4, padding: 16, alignItems: "center" } as ViewStyle,
+  accountTypeButtonActive: { backgroundColor: "rgba(201, 162, 39, 0.1)", borderColor: COLORS.gold, borderWidth: 2 } as ViewStyle,
+  accountTypeButtonText: { fontSize: 14, fontWeight: "600", color: COLORS.text, letterSpacing: 0.5, marginBottom: 4 } as TextStyle,
+  accountTypeButtonTextActive: { color: COLORS.gold } as TextStyle,
+  accountTypeButtonSubtext: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 0.3 } as TextStyle,
+  sellerCategoryContainer: { gap: 12 } as ViewStyle,
+  sellerCategoryButton: { backgroundColor: COLORS.inputBg, borderWidth: 1, borderColor: COLORS.inputBorder, borderRadius: 4, padding: 14, alignItems: "flex-start" } as ViewStyle,
+  sellerCategoryButtonActive: { backgroundColor: "rgba(201, 162, 39, 0.1)", borderColor: COLORS.gold, borderWidth: 2 } as ViewStyle,
+  sellerCategoryButtonText: { fontSize: 13, fontWeight: "600", color: COLORS.text, letterSpacing: 0.5, marginBottom: 4 } as TextStyle,
+  sellerCategoryButtonTextActive: { color: COLORS.gold } as TextStyle,
+  sellerCategoryButtonSubtext: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 0.2 } as TextStyle,
+  sellerCategoryHint: { fontSize: 11, color: COLORS.textMuted, marginTop: 8, letterSpacing: 0.2, lineHeight: 16 } as TextStyle,
 })
 
 // Profile screen styles

@@ -1,5 +1,5 @@
 import { supabase } from './client'
-import { UserProfile, UserRole } from './types'
+import { UserProfile, UserRole, SellerCategory } from './types'
 import * as WebBrowser from 'expo-web-browser'
 import * as AuthSession from 'expo-auth-session'
 
@@ -8,6 +8,8 @@ export interface SignUpData {
   password: string
   fullName?: string
   phone?: string
+  role?: UserRole
+  sellerCategory?: SellerCategory
 }
 
 export interface SignInData {
@@ -164,6 +166,8 @@ export const signUp = async (data: SignUpData): Promise<AuthResponse> => {
         data: {
           full_name: data.fullName,
           phone: data.phone,
+          role: data.role || 'customer',
+          seller_category: data.sellerCategory,
         },
       },
     })
@@ -183,7 +187,8 @@ export const signUp = async (data: SignUpData): Promise<AuthResponse> => {
       email: data.email,
       full_name: data.fullName,
       phone: data.phone,
-      role: 'customer' as UserRole,
+      role: (data.role || 'customer') as UserRole,
+      seller_category: data.sellerCategory,
     }
 
     const { error: profileError } = await supabase
