@@ -24,7 +24,6 @@ import {
   fetchNewProducts,
   fetchAllProducts,
   fetchFournisseurProductsPaginated,
-  fetchProductsByCategoryPaginated,
   subscribeToProducts,
   invalidateProductCaches,
   ProductWithImage,
@@ -32,6 +31,7 @@ import {
 import { toggleWishlist, getWishlistIds, subscribeToWishlist } from "@/services/supabase/wishlistService"
 import { addToCart } from "@/services/supabase/cartService"
 import { useAuth } from "@/context/AuthContext"
+import { matchesCategory } from "@/utils/categoryMappings"
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
@@ -489,12 +489,15 @@ export const MarketplaceScreen: FC<MarketplaceScreenProps> = function Marketplac
       return
     }
 
-    // Fetch products for selected category - filter by fournisseur to match home page
+    // Fetch all fournisseur products and filter client-side using fuzzy matching
+    // This matches the website's filtering strategy for consistency
     setLoadingCategory(true)
     setCategoryPage(0)
     try {
-      const result = await fetchProductsByCategoryPaginated(category, 0, PAGE_SIZE, 'fournisseur')
-      setCategoryProducts(result.products)
+      const result = await fetchFournisseurProductsPaginated(0, PAGE_SIZE)
+      // Filter products client-side using fuzzy category matching
+      const filtered = result.products.filter(product => matchesCategory(product.category, category))
+      setCategoryProducts(filtered)
       setHasMoreCategory(result.hasMore)
     } catch (error) {
       console.error('Error fetching category products:', error)
@@ -503,15 +506,17 @@ export const MarketplaceScreen: FC<MarketplaceScreenProps> = function Marketplac
     }
   }, [])
 
-  // Load more category products
+  // Load more category products (with client-side filtering)
   const loadMoreCategoryProducts = useCallback(async () => {
     if (loadingCategory || !hasMoreCategory || !selectedCategory) return
 
     setLoadingCategory(true)
     try {
       const nextPage = categoryPage + 1
-      const result = await fetchProductsByCategoryPaginated(selectedCategory, nextPage, PAGE_SIZE, 'fournisseur')
-      setCategoryProducts(prev => [...prev, ...result.products])
+      const result = await fetchFournisseurProductsPaginated(nextPage, PAGE_SIZE)
+      // Filter new products client-side using fuzzy category matching
+      const filtered = result.products.filter(product => matchesCategory(product.category, selectedCategory))
+      setCategoryProducts(prev => [...prev, ...filtered])
       setHasMoreCategory(result.hasMore)
       setCategoryPage(nextPage)
     } catch (error) {
