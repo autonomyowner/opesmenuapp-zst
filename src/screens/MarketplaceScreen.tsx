@@ -489,11 +489,11 @@ export const MarketplaceScreen: FC<MarketplaceScreenProps> = function Marketplac
       return
     }
 
-    // Fetch products for selected category
+    // Fetch products for selected category - filter by fournisseur to match home page
     setLoadingCategory(true)
     setCategoryPage(0)
     try {
-      const result = await fetchProductsByCategoryPaginated(category, 0, PAGE_SIZE)
+      const result = await fetchProductsByCategoryPaginated(category, 0, PAGE_SIZE, 'fournisseur')
       setCategoryProducts(result.products)
       setHasMoreCategory(result.hasMore)
     } catch (error) {
@@ -510,7 +510,7 @@ export const MarketplaceScreen: FC<MarketplaceScreenProps> = function Marketplac
     setLoadingCategory(true)
     try {
       const nextPage = categoryPage + 1
-      const result = await fetchProductsByCategoryPaginated(selectedCategory, nextPage, PAGE_SIZE)
+      const result = await fetchProductsByCategoryPaginated(selectedCategory, nextPage, PAGE_SIZE, 'fournisseur')
       setCategoryProducts(prev => [...prev, ...result.products])
       setHasMoreCategory(result.hasMore)
       setCategoryPage(nextPage)

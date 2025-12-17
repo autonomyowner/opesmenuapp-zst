@@ -463,21 +463,21 @@ export const fetchFournisseurProductsPaginated = async (
 export const fetchProductsByCategoryPaginated = async (
   category: string,
   page: number = 0,
-  pageSize: number = DEFAULT_PAGE_SIZE
+  pageSize: number = DEFAULT_PAGE_SIZE,
+  sellerCategory?: string
 ): Promise<PaginatedProducts> => {
   try {
     const from = page * pageSize
     const to = from + pageSize - 1
 
-    // Get total count
-    const { count: totalCount } = await supabase
+    // Build base query
+    let countQuery = supabase
       .from('products')
       .select('*', { count: 'exact', head: true })
       .eq('in_stock', true)
       .eq('category', category)
 
-    // Fetch paginated products
-    const { data: products, error } = await supabase
+    let productsQuery = supabase
       .from('products')
       .select(`
         *,
@@ -486,6 +486,18 @@ export const fetchProductsByCategoryPaginated = async (
       `)
       .eq('in_stock', true)
       .eq('category', category)
+
+    // Add seller_category filter if provided
+    if (sellerCategory) {
+      countQuery = countQuery.eq('seller_category', sellerCategory)
+      productsQuery = productsQuery.eq('seller_category', sellerCategory)
+    }
+
+    // Get total count
+    const { count: totalCount } = await countQuery
+
+    // Fetch paginated products
+    const { data: products, error } = await productsQuery
       .order('created_at', { ascending: false })
       .range(from, to)
 

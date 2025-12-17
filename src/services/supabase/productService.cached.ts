@@ -215,11 +215,16 @@ export const fetchFournisseurProductsPaginated = async (
 export const fetchProductsByCategoryPaginated = async (
   category: string,
   page: number = 0,
-  pageSize: number = 20
+  pageSize: number = 20,
+  sellerCategory?: string
 ): Promise<PaginatedProducts> => {
+  const cacheKey = sellerCategory
+    ? `products:category:${category}:seller:${sellerCategory}:paginated:${page}:${pageSize}`
+    : `products:category:${category}:paginated:${page}:${pageSize}`
+
   const cached = await getCached(
-    `products:category:${category}:paginated:${page}:${pageSize}`,
-    () => fetchProductsByCategoryPaginatedOriginal(category, page, pageSize),
+    cacheKey,
+    () => fetchProductsByCategoryPaginatedOriginal(category, page, pageSize, sellerCategory),
     { ttl: CACHE_DURATIONS.CATEGORY_PRODUCTS }
   )
 
