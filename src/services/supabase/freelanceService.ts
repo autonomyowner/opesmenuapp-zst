@@ -174,3 +174,63 @@ export const subscribeToFreelanceServices = (onUpdate: (payload: unknown) => voi
 
   return subscription
 }
+
+// Delete a freelance service by ID
+export const deleteFreelanceService = async (
+  serviceId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const { error } = await supabase
+      .from("freelance_services")
+      .delete()
+      .eq("id", serviceId)
+
+    if (error) {
+      console.error("Error deleting freelance service:", error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error in deleteFreelanceService:", error)
+    return { success: false, error: "Failed to delete service" }
+  }
+}
+
+// Delete a freelance service by title (for cleanup)
+export const deleteFreelanceServiceByTitle = async (
+  titlePattern: string
+): Promise<{ success: boolean; error?: string; deletedCount?: number }> => {
+  try {
+    // First find matching services
+    const { data: services, error: fetchError } = await supabase
+      .from("freelance_services")
+      .select("id, service_title")
+      .ilike("service_title", `%${titlePattern}%`)
+
+    if (fetchError) {
+      console.error("Error finding services:", fetchError)
+      return { success: false, error: fetchError.message }
+    }
+
+    if (!services || services.length === 0) {
+      return { success: false, error: "No matching services found" }
+    }
+
+    // Delete all matching services
+    const { error: deleteError } = await supabase
+      .from("freelance_services")
+      .delete()
+      .ilike("service_title", `%${titlePattern}%`)
+
+    if (deleteError) {
+      console.error("Error deleting services:", deleteError)
+      return { success: false, error: deleteError.message }
+    }
+
+    return { success: true, deletedCount: services.length }
+  } catch (error) {
+    console.error("Error in deleteFreelanceServiceByTitle:", error)
+    return { success: false, error: "Failed to delete services" }
+  }
+}

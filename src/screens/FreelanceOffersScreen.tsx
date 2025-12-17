@@ -8,6 +8,10 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  Alert,
+  Dimensions,
 } from "react-native"
 
 import { Text } from "@/components/Text"
@@ -19,6 +23,8 @@ import {
   FreelanceService,
   ServiceCategory,
 } from "@/services/supabase/freelanceService"
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
 // Luxe Art Deco Color Palette (matching Dashboard)
 const COLORS = {
@@ -50,9 +56,10 @@ interface FreelanceOffersScreenProps {
 // Service Card Component
 interface ServiceCardProps {
   service: FreelanceService
+  onPress: () => void
 }
 
-const ServiceCard: FC<ServiceCardProps> = ({ service }) => {
+const ServiceCard: FC<ServiceCardProps> = ({ service, onPress }) => {
   const getPriceTypeLabel = (type: string) => {
     switch (type) {
       case "fixed":
@@ -82,7 +89,7 @@ const ServiceCard: FC<ServiceCardProps> = ({ service }) => {
   const availabilityStyle = getAvailabilityStyle(service.availability)
 
   return (
-    <View style={styles.serviceCard}>
+    <TouchableOpacity style={styles.serviceCard} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.serviceHeader}>
         <Text style={styles.serviceTitle} numberOfLines={2}>
           {service.service_title}
@@ -157,7 +164,219 @@ const ServiceCard: FC<ServiceCardProps> = ({ service }) => {
       {service.provider && (
         <Text style={styles.providerName}>Par {service.provider.full_name}</Text>
       )}
-    </View>
+    </TouchableOpacity>
+  )
+}
+
+// Service Detail Modal Component
+interface ServiceDetailModalProps {
+  visible: boolean
+  service: FreelanceService | null
+  onClose: () => void
+  onMessage: (message: string) => void
+}
+
+const ServiceDetailModal: FC<ServiceDetailModalProps> = ({
+  visible,
+  service,
+  onClose,
+  onMessage,
+}) => {
+  const [message, setMessage] = useState("")
+
+  if (!service) return null
+
+  const getPriceTypeLabel = (type: string) => {
+    switch (type) {
+      case "fixed":
+        return "Prix fixe"
+      case "hourly":
+        return "/heure"
+      case "starting-at":
+        return "A partir de"
+      default:
+        return ""
+    }
+  }
+
+  const getAvailabilityStyle = (status: string) => {
+    switch (status) {
+      case "available":
+        return { bg: COLORS.successMuted, text: COLORS.success, label: "Disponible" }
+      case "busy":
+        return { bg: COLORS.warningMuted, text: COLORS.warning, label: "Occupe" }
+      case "unavailable":
+        return { bg: COLORS.errorMuted, text: COLORS.error, label: "Indisponible" }
+      default:
+        return { bg: COLORS.surfaceBorder, text: COLORS.textSecondary, label: status }
+    }
+  }
+
+  const availabilityStyle = getAvailabilityStyle(service.availability)
+
+  const handleSendMessage = () => {
+    if (!message.trim()) {
+      Alert.alert("Erreur", "Veuillez entrer un message")
+      return
+    }
+    onMessage(message)
+    setMessage("")
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="slide">
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          {/* Modal Header */}
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Details du Service</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Text style={styles.modalClose}>X</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            {/* Service Title */}
+            <Text style={styles.detailTitle}>{service.service_title}</Text>
+
+            {/* Badges Row */}
+            <View style={styles.detailBadgesRow}>
+              {service.verified && (
+                <View style={styles.verifiedBadge}>
+                  <Text style={styles.verifiedText}>Verifie</Text>
+                </View>
+              )}
+              <View style={[styles.availabilityBadge, { backgroundColor: availabilityStyle.bg }]}>
+                <Text style={[styles.availabilityText, { color: availabilityStyle.text }]}>
+                  {availabilityStyle.label}
+                </Text>
+              </View>
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryText}>{service.category}</Text>
+              </View>
+            </View>
+
+            {/* Price Section */}
+            <View style={styles.detailPriceSection}>
+              <Text style={styles.detailPriceValue}>{(service.price || 0).toLocaleString()} DA</Text>
+              <Text style={styles.detailPriceType}>{getPriceTypeLabel(service.price_type)}</Text>
+            </View>
+
+            {/* Provider */}
+            {service.provider && (
+              <View style={styles.detailProviderSection}>
+                <Text style={styles.detailSectionLabel}>FREELANCER</Text>
+                <Text style={styles.detailProviderName}>{service.provider.full_name}</Text>
+              </View>
+            )}
+
+            {/* Description */}
+            <View style={styles.detailSection}>
+              <Text style={styles.detailSectionLabel}>DESCRIPTION</Text>
+              <Text style={styles.detailDescription}>{service.description || service.short_description}</Text>
+            </View>
+
+            {/* Skills Section */}
+            {service.skills && service.skills.length > 0 && (
+              <View style={styles.detailSection}>
+                <Text style={styles.detailSectionLabel}>COMPETENCES</Text>
+                <View style={styles.detailSkillsGrid}>
+                  {service.skills.map((skill, index) => (
+                    <View key={index} style={styles.detailSkillBadge}>
+                      <Text style={styles.detailSkillText}>{skill}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Details Grid */}
+            <View style={styles.detailSection}>
+              <Text style={styles.detailSectionLabel}>INFORMATIONS</Text>
+              <View style={styles.detailInfoGrid}>
+                {service.experience_level && (
+                  <View style={styles.detailInfoItem}>
+                    <Text style={styles.detailInfoLabel}>Experience</Text>
+                    <Text style={styles.detailInfoValue}>{service.experience_level}</Text>
+                  </View>
+                )}
+                {service.delivery_time && (
+                  <View style={styles.detailInfoItem}>
+                    <Text style={styles.detailInfoLabel}>Delai</Text>
+                    <Text style={styles.detailInfoValue}>{service.delivery_time}</Text>
+                  </View>
+                )}
+                {service.revisions && (
+                  <View style={styles.detailInfoItem}>
+                    <Text style={styles.detailInfoLabel}>Revisions</Text>
+                    <Text style={styles.detailInfoValue}>{service.revisions}</Text>
+                  </View>
+                )}
+                {service.response_time && (
+                  <View style={styles.detailInfoItem}>
+                    <Text style={styles.detailInfoLabel}>Temps de reponse</Text>
+                    <Text style={styles.detailInfoValue}>{service.response_time}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Rating Section */}
+            {service.rating !== undefined && service.rating > 0 && (
+              <View style={styles.detailSection}>
+                <Text style={styles.detailSectionLabel}>EVALUATIONS</Text>
+                <View style={styles.detailRatingRow}>
+                  <Text style={styles.detailRatingValue}>{service.rating.toFixed(1)}</Text>
+                  <Text style={styles.detailRatingLabel}>/ 5</Text>
+                  <Text style={styles.detailReviewsCount}>({service.reviews_count || 0} avis)</Text>
+                </View>
+                {service.completed_projects > 0 && (
+                  <Text style={styles.detailProjectsText}>
+                    {service.completed_projects} projet{service.completed_projects > 1 ? "s" : ""} termine{service.completed_projects > 1 ? "s" : ""}
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {/* Languages */}
+            {service.languages && service.languages.length > 0 && (
+              <View style={styles.detailSection}>
+                <Text style={styles.detailSectionLabel}>LANGUES</Text>
+                <View style={styles.detailLanguagesRow}>
+                  {service.languages.map((lang, index) => (
+                    <View key={index} style={styles.detailLanguageBadge}>
+                      <Text style={styles.detailLanguageText}>{lang}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Message Section */}
+            <View style={styles.detailSection}>
+              <Text style={styles.detailSectionLabel}>CONTACTER LE FREELANCER</Text>
+              <TextInput
+                style={styles.messageInput}
+                value={message}
+                onChangeText={setMessage}
+                placeholder="Ecrivez votre message..."
+                placeholderTextColor={COLORS.textMuted}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+
+            <View style={{ height: 20 }} />
+          </ScrollView>
+
+          {/* Send Message Button */}
+          <TouchableOpacity style={styles.sendMessageBtn} onPress={handleSendMessage}>
+            <Text style={styles.sendMessageBtnText}>Envoyer le message</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   )
 }
 
@@ -170,6 +389,9 @@ export const FreelanceOffersScreen: FC<FreelanceOffersScreenProps> = ({ onBack }
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [selectedService, setSelectedService] = useState<FreelanceService | null>(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
@@ -179,7 +401,13 @@ export const FreelanceOffersScreen: FC<FreelanceOffersScreenProps> = ({ onBack }
       const servicesData = selectedCategory
         ? await fetchFreelanceServicesByCategory(selectedCategory)
         : await fetchFreelanceServices()
-      setServices(servicesData)
+
+      // Filter out test data
+      const filteredServices = servicesData.filter(
+        (service) => !(service.service_title?.toLowerCase().includes("sdfgs") &&
+                       service.provider?.full_name?.toLowerCase().includes("tayeb"))
+      )
+      setServices(filteredServices)
     } catch (error) {
       console.error("Error loading freelance data:", error)
     } finally {
@@ -200,6 +428,30 @@ export const FreelanceOffersScreen: FC<FreelanceOffersScreenProps> = ({ onBack }
   const handleCategorySelect = (category: ServiceCategory | null) => {
     setSelectedCategory(category)
     setIsLoading(true)
+  }
+
+  const handleServicePress = (service: FreelanceService) => {
+    setSelectedService(service)
+    setShowDetailModal(true)
+  }
+
+  const handleCloseDetail = () => {
+    setShowDetailModal(false)
+    setSelectedService(null)
+  }
+
+  const handleSendMessage = (message: string) => {
+    // Mock implementation - show success message
+    setShowDetailModal(false)
+    setSelectedService(null)
+    // Show success modal after a brief delay
+    setTimeout(() => {
+      setShowSuccessModal(true)
+    }, 300)
+  }
+
+  const handleCloseSuccessModal = () => {
+    setShowSuccessModal(false)
   }
 
   if (isLoading) {
@@ -301,13 +553,50 @@ export const FreelanceOffersScreen: FC<FreelanceOffersScreenProps> = ({ onBack }
               {services.length > 1 ? "s" : ""}
             </Text>
             {services.map((service) => (
-              <ServiceCard key={service.id} service={service} />
+              <ServiceCard
+                key={service.id}
+                service={service}
+                onPress={() => handleServicePress(service)}
+              />
             ))}
           </>
         )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Service Detail Modal */}
+      <ServiceDetailModal
+        visible={showDetailModal}
+        service={selectedService}
+        onClose={handleCloseDetail}
+        onMessage={handleSendMessage}
+      />
+
+      {/* Success Modal */}
+      <Modal visible={showSuccessModal} transparent animationType="fade">
+        <View style={styles.successModalOverlay}>
+          <View style={styles.successModalContent}>
+            <View style={styles.successIconContainer}>
+              <View style={styles.successIconCircle}>
+                <Text style={styles.successIconText}>✓</Text>
+              </View>
+            </View>
+            <Text style={styles.successTitle}>Message Envoye</Text>
+            <Text style={styles.successSubtitle}>
+              Votre message a ete envoye avec succes. Le freelancer vous repondra bientot.
+            </Text>
+            <View style={styles.successDivider} />
+            <TouchableOpacity
+              style={styles.successButton}
+              onPress={handleCloseSuccessModal}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.successButtonText}>Continuer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -591,5 +880,280 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     textAlign: "center",
     lineHeight: 20,
+  } as TextStyle,
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "flex-end",
+  } as ViewStyle,
+  modalContent: {
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "90%",
+  } as ViewStyle,
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.surfaceBorder,
+  } as ViewStyle,
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.text,
+  } as TextStyle,
+  modalClose: {
+    fontSize: 20,
+    color: COLORS.textSecondary,
+    padding: 4,
+  } as TextStyle,
+  modalBody: {
+    padding: 20,
+  } as ViewStyle,
+
+  // Detail View Styles
+  detailTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 16,
+    lineHeight: 32,
+  } as TextStyle,
+  detailBadgesRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 20,
+  } as ViewStyle,
+  detailPriceSection: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8,
+    marginBottom: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.goldMuted,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.goldDark,
+  } as ViewStyle,
+  detailPriceValue: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: COLORS.gold,
+  } as TextStyle,
+  detailPriceType: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  } as TextStyle,
+  detailProviderSection: {
+    marginBottom: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceBorder,
+  } as ViewStyle,
+  detailProviderName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.text,
+  } as TextStyle,
+  detailSection: {
+    marginBottom: 20,
+  } as ViewStyle,
+  detailSectionLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    letterSpacing: 1,
+    marginBottom: 10,
+  } as TextStyle,
+  detailDescription: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    lineHeight: 24,
+  } as TextStyle,
+  detailSkillsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  } as ViewStyle,
+  detailSkillBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: COLORS.surfaceElevated,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceBorder,
+  } as ViewStyle,
+  detailSkillText: {
+    fontSize: 13,
+    color: COLORS.text,
+    fontWeight: "500",
+  } as TextStyle,
+  detailInfoGrid: {
+    gap: 12,
+  } as ViewStyle,
+  detailInfoItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceBorder,
+  } as ViewStyle,
+  detailInfoLabel: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  } as TextStyle,
+  detailInfoValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text,
+  } as TextStyle,
+  detailRatingRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 4,
+    marginBottom: 8,
+  } as ViewStyle,
+  detailRatingValue: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: COLORS.gold,
+  } as TextStyle,
+  detailRatingLabel: {
+    fontSize: 18,
+    color: COLORS.textMuted,
+  } as TextStyle,
+  detailReviewsCount: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginLeft: 8,
+  } as TextStyle,
+  detailProjectsText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+  } as TextStyle,
+  detailLanguagesRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  } as ViewStyle,
+  detailLanguageBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: COLORS.infoMuted,
+    borderRadius: 6,
+  } as ViewStyle,
+  detailLanguageText: {
+    fontSize: 12,
+    color: COLORS.info,
+    fontWeight: "500",
+  } as TextStyle,
+  messageInput: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceBorder,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: COLORS.text,
+    minHeight: 100,
+  } as TextStyle,
+  sendMessageBtn: {
+    margin: 20,
+    backgroundColor: COLORS.gold,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  } as ViewStyle,
+  sendMessageBtnText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.background,
+  } as TextStyle,
+
+  // Success Modal Styles
+  successModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  } as ViewStyle,
+  successModalContent: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 340,
+    borderWidth: 1,
+    borderColor: COLORS.goldDark,
+  } as ViewStyle,
+  successIconContainer: {
+    marginBottom: 24,
+  } as ViewStyle,
+  successIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.successMuted,
+    borderWidth: 3,
+    borderColor: COLORS.success,
+    justifyContent: "center",
+    alignItems: "center",
+  } as ViewStyle,
+  successIconText: {
+    fontSize: 40,
+    color: COLORS.success,
+    fontWeight: "700",
+  } as TextStyle,
+  successTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 12,
+    textAlign: "center",
+  } as TextStyle,
+  successSubtitle: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 24,
+  } as TextStyle,
+  successDivider: {
+    width: 60,
+    height: 2,
+    backgroundColor: COLORS.goldMuted,
+    marginBottom: 24,
+  } as ViewStyle,
+  successButton: {
+    backgroundColor: COLORS.gold,
+    paddingVertical: 16,
+    paddingHorizontal: 48,
+    borderRadius: 12,
+    width: "100%",
+    alignItems: "center",
+  } as ViewStyle,
+  successButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.background,
+    letterSpacing: 0.5,
   } as TextStyle,
 })
